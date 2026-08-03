@@ -1,0 +1,32 @@
+<svg width="820" height="366" viewBox="0 0 820 366" fill="none" xmlns="http://www.w3.org/2000/svg" font-family="ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace">
+  <defs>
+    <linearGradient id="glow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0d1117"/>
+      <stop offset="1" stop-color="#010409"/>
+    </linearGradient>
+  </defs>
+
+  <!-- window -->
+  <rect x="8" y="8" width="804" height="350" rx="12" fill="url(#glow)" stroke="#30363d" stroke-width="1.5"/>
+
+  <!-- title bar -->
+  <rect x="8" y="8" width="804" height="44" rx="12" fill="#161b22"/>
+  <rect x="8" y="40" width="804" height="12" fill="#161b22"/>
+  <circle cx="34" cy="30" r="6" fill="#ff5f56"/>
+  <circle cx="56" cy="30" r="6" fill="#ffbd2e"/>
+  <circle cx="78" cy="30" r="6" fill="#27c93f"/>
+  <text x="410" y="35" text-anchor="middle" font-size="13" fill="#8b949e">husky-skill · pre-commit</text>
+
+  <!-- body -->
+  <g font-size="15.5">
+    <text x="30" y="86"><tspan fill="#3fb950">$</tspan><tspan fill="#c9d1d9"> git commit -m </tspan><tspan fill="#a5d6ff">"add config"</tspan></text>
+
+    <text x="30" y="134" fill="#f85149">✖ Possible credential detected in added lines:</text>
+    <text x="30" y="162" fill="#8b949e">  2:+  aws_secret_access_key: <tspan fill="#ff7b72">"AKIA…EXAMPLE1234"</tspan></text>
+
+    <text x="30" y="210" fill="#d29922">If this is a false positive (fixture/test), commit with:</text>
+    <text x="30" y="238" fill="#8b949e">  git commit --no-verify   <tspan fill="#6e7681">(and tell the team)</tspan></text>
+
+    <text x="30" y="292"><tspan fill="#f85149" font-weight="bold">▲</tspan><tspan fill="#7d8590"> commit blocked — 0 secrets reach the remote  ·  exit 1</tspan></text>
+  </g>
+</svg>
