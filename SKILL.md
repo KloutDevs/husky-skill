@@ -11,8 +11,8 @@ description: >-
   mentions Husky, lint-staged, commitlint, pre-commit, githooks — even
   implicitly ("fail commits if ESLint fails", "block secrets before push").
 metadata:
-  version: "2.0.0"
-  tags: "git-hooks, husky, lint-staged, commitlint, pre-commit, commit-msg, pre-push, post-merge, secret-scanning, conventional-commits, eslint, prettier, typescript, monorepo, test-coverage, dependency-audit, posix-shell, zero-dependencies"
+  version: "2.1.0"
+  tags: "git-hooks, husky, lint-staged, commitlint, pre-commit, commit-msg, pre-push, post-merge, pre-rebase, post-checkout, secret-scanning, conventional-commits, eslint, prettier, typescript, monorepo, test-coverage, dependency-audit, posix-shell, zero-dependencies"
 ---
 
 # Husky Skill
@@ -24,14 +24,16 @@ policy (fintech, healthcare, government).
 
 ## Purpose
 
-Prevent problematic code from entering the repository at four stages:
+Prevent problematic code from entering the repository across the workflow:
 
-| Stage           | Hook          | Budget   | Role                                       |
-| --------------- | ------------- | -------- | ------------------------------------------ |
-| Before commit   | `pre-commit`  | <5s      | Fast feedback: secrets, lint, format       |
-| Commit message  | `commit-msg`  | instant  | Audit trail: Conventional Commits          |
-| Before push     | `pre-push`    | 30s–2min | Last gate: types, build, tests, coverage   |
-| After merge     | `post-merge`  | instant  | Flag lockfile drift → suggest `npm install` |
+| Stage           | Hook            | Budget   | Role                                        |
+| --------------- | --------------- | -------- | ------------------------------------------- |
+| Before commit   | `pre-commit`    | <5s      | Fast feedback: secrets, lint, format        |
+| Commit message  | `commit-msg`    | instant  | Audit trail: Conventional Commits           |
+| Before push     | `pre-push`      | 30s–2min | Last gate: types, build, tests, coverage    |
+| Before rebase   | `pre-rebase`    | instant  | Guard: refuse to rewrite protected branches |
+| After merge     | `post-merge`    | instant  | Flag lockfile drift → suggest `npm install` |
+| After checkout  | `post-checkout` | instant  | Flag lockfile drift on branch switch        |
 
 **Design principle: a slow hook is a bypassed hook.** Heavy checks live in
 `pre-push`, so every commit stays fast and nobody reaches for `--no-verify` by
@@ -71,6 +73,10 @@ future installs.
   coverage gate · optional `npm audit` (opt-in) · optional API-break heuristic.
 - **post-merge**: warns when `package-lock.json`/`yarn.lock` changed after a pull,
   so you don't run stale dependencies.
+- **pre-rebase**: refuses to rebase a protected branch (`main`/`master`/`develop`
+  by default; set `PROTECTED_BRANCHES`) — rewriting shared history loses commits.
+- **post-checkout**: warns on lockfile drift after switching branches (sibling of
+  post-merge; never installs for you).
 
 ## Full documentation
 

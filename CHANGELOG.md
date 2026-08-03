@@ -5,6 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-08-03
+
+### Added
+
+- **`pre-rebase` hook** — refuses to rebase a protected branch
+  (`main`/`master`/`develop` by default; configurable via `PROTECTED_BRANCHES`),
+  so shared history isn't rewritten. Bypass: `HUSKY=0`.
+- **`post-checkout` hook** — warns when the lockfile differs after switching
+  branches (sibling of `post-merge`; never installs for you).
+- `references/full-guide.md`: a "prepare-commit-msg" recipe showing how to add a
+  hook we don't ship (ticket-id injection), plus detailed sections for the two
+  new hooks.
+
 ## [2.0.0] - 2026-08-03
 
 ### Added
@@ -53,5 +66,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `scripts/install.sh` with idempotent install + `prepare` wiring.
 - MIT license.
 
+[2.1.0]: https://github.com/KloutDevs/husky-skill/releases/tag/v2.1.0
 [2.0.0]: https://github.com/KloutDevs/husky-skill/releases/tag/v2.0.0
 [1.0.0]: https://github.com/KloutDevs/husky-skill/releases/tag/v1.0.0

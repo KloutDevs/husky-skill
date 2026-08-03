@@ -1,0 +1,33 @@
+#!/bin/sh
+# husky-skill · post-checkout
+# After switching branches, warns when the dependency lockfile differs so you
+# don't run stale dependencies. Sibling of post-merge — it NEVER installs for you.
+# Only acts on branch switches, not file checkouts. Skip: HUSKY=0
+
+[ "$HUSKY" = "0" ] && exit 0
+
+# git passes: $1 = previous HEAD, $2 = new HEAD, $3 = 1 for a branch checkout
+PREV="$1"
+NEW="$2"
+BRANCH_CHECKOUT="$3"
+
+# Only branch switches; ignore file checkouts and no-op switches
+[ "$BRANCH_CHECKOUT" = "1" ] || exit 0
+[ "$PREV" = "$NEW" ] && exit 0
+# Fresh clone: previous HEAD is all zeros → nothing to compare
+case "$PREV" in 0000000000000000000000000000000000000000) exit 0 ;; esac
+
+if [ -t 2 ]; then
+  YELLOW=$(printf '\033[0;33m'); NC=$(printf '\033[0m')
+else
+  YELLOW=''; NC=''
+fi
+
+CHANGED=$(git diff --name-only "$PREV" "$NEW" 2>/dev/null || true)
+echo "$CHANGED" | grep -qE '(^|/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml)$' && {
+  printf '%s· Dependency lockfile differs on this branch.%s\n' "$YELLOW" "$NC" >&2
+  printf '  Run your installer to avoid running stale dependencies:\n' >&2
+  printf '    npm install   (or yarn / pnpm install)\n' >&2
+}
+
+exit 0

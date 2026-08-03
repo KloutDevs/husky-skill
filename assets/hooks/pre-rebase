@@ -1,0 +1,31 @@
+#!/bin/sh
+# husky-skill · pre-rebase
+# Refuses to rebase a protected branch (main/master/develop by default) — rewriting
+# shared history is how teams lose commits. Rebasing feature branches is fine.
+# Configure the list: PROTECTED_BRANCHES="main release" git rebase …
+# Skip: HUSKY=0  (note: `git rebase` has no --no-verify for this hook)
+
+[ "$HUSKY" = "0" ] && exit 0
+
+if [ -t 2 ]; then
+  RED=$(printf '\033[0;31m'); YELLOW=$(printf '\033[0;33m'); NC=$(printf '\033[0m')
+else
+  RED=''; YELLOW=''; NC=''
+fi
+
+PROTECTED="${PROTECTED_BRANCHES:-main master develop}"
+
+# git passes: $1 = upstream, $2 = branch being rebased (empty when it's the current branch)
+BRANCH="$2"
+[ -z "$BRANCH" ] && BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null)
+
+case " $PROTECTED " in
+  *" $BRANCH "*)
+    printf '%s✖ Refusing to rebase protected branch "%s".%s\n' "$RED" "$BRANCH" "$NC" >&2
+    printf '  Rewriting shared history breaks everyone who has pulled it.\n' >&2
+    printf '  %sRebase a feature branch instead, or override with: HUSKY=0 git rebase …%s\n' "$YELLOW" "$NC" >&2
+    exit 1
+    ;;
+esac
+
+exit 0

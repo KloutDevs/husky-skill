@@ -17,15 +17,15 @@ why `core.hooksPath` (pointing at a tracked `.githooks/`) is the whole trick.
 | `commit-msg`         | After you write the message         | ✅                    | Enforce message format              |
 | `post-commit`        | After the commit is created         | —                     | Notifications, logging              |
 | `pre-push`           | Before pushing to a remote          | ✅                    | Types, build, tests, coverage       |
-| `pre-rebase`         | Before a rebase starts              | —                     | Block rebase on protected branches  |
+| `pre-rebase`         | Before a rebase starts              | ✅                    | Block rebase on protected branches  |
 | `post-merge`         | After `git merge` / `git pull`      | ✅                    | Flag lockfile drift                 |
-| `post-checkout`      | After `git checkout` / `switch`     | —                     | Rebuild assets, install deps        |
+| `post-checkout`      | After `git checkout` / `switch`     | ✅                    | Flag lockfile drift on branch switch |
 
 Want one we don't ship? Drop a POSIX-`sh` file with that name into your repo's
 `.githooks/` — `core.hooksPath` picks it up automatically. Keep the same rules:
 no auto-fix, no `npx`, tools optional.
 
-## The four hooks in detail
+## The hooks in detail
 
 ### pre-commit (staged files only, target <5s)
 
@@ -88,11 +88,55 @@ still don't need commitlint locally — the hook covers it dependency-free.
 
 Pushing a branch deletion runs no checks (nothing to validate).
 
+### pre-rebase
+
+Refuses to rebase a **protected branch** — rewriting shared history is how teams
+lose commits. Defaults to `main master develop`; override per repo or per command
+with `PROTECTED_BRANCHES`:
+
+```sh
+PROTECTED_BRANCHES="main release/*" git rebase main   # note: exact names, not globs
+```
+
+Rebasing feature branches is always allowed. `git rebase` has no `--no-verify`
+for this hook, so the escape hatch is `HUSKY=0 git rebase …`.
+
 ### post-merge
 
 After a `git pull`/`merge`, warns if `package-lock.json` / `yarn.lock` /
 `pnpm-lock.yaml` changed, so you don't run stale dependencies. It **never**
 installs for you — a hook must not mutate your environment silently.
+
+### post-checkout
+
+The sibling of `post-merge`: after you **switch branches**, warns if the lockfile
+differs between the two branches. Only fires on branch switches (not file
+checkouts like `git checkout -- file`, and not the initial clone). Same rule — it
+warns, it never installs.
+
+## Adding a hook we don't ship
+
+Because `core.hooksPath` points at your tracked `.githooks/`, adding any other
+git hook is just dropping an executable POSIX-`sh` file with the hook's name.
+Example — a `prepare-commit-msg` that prepends the ticket ID from the branch name
+(e.g. branch `feature/JIRA-123-foo` → `JIRA-123: `):
+
+```sh
+cat > .githooks/prepare-commit-msg <<'EOF'
+#!/bin/sh
+# Prepend the ticket id from the branch name, if present and not already there.
+MSG_FILE="$1"
+BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null)
+TICKET=$(printf '%s' "$BRANCH" | grep -oE '[A-Z]+-[0-9]+' | head -1)
+[ -z "$TICKET" ] && exit 0
+grep -q "$TICKET" "$MSG_FILE" && exit 0
+printf '%s: %s' "$TICKET" "$(cat "$MSG_FILE")" > "$MSG_FILE"
+EOF
+chmod +x .githooks/prepare-commit-msg
+```
+
+We don't ship this one because the "right" ticket format is team-specific — but
+the pattern is the whole point: no framework, no dependency, just a named file.
 
 ## Escape hatches (complete)
 

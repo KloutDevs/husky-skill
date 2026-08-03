@@ -7,7 +7,7 @@
 </p>
 
 <p>
-  <a href="CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-2.0.0-38bdf8"></a>
+  <a href="CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-2.1.0-38bdf8"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-3fb950.svg"></a>
   <img alt="Shell: POSIX" src="https://img.shields.io/badge/shell-POSIX-4EAA25?logo=gnubash&logoColor=white">
   <img alt="npm dependencies: 0" src="https://img.shields.io/badge/npm_dependencies-0-38bdf8">
@@ -55,7 +55,7 @@ Built for environments where the dependency tree is policy — **fintech, health
 | Test-coverage gate                | **built-in** (pre-push)     | needs custom config          |
 | Dependency audit                  | **built-in** (opt-in)       | not included                 |
 | Works in dependency-locked repos  | **yes**                     | no                           |
-| Install footprint                 | **4 hook files + `git config`** | `npm install husky`      |
+| Install footprint                 | **6 hook files + `git config`** | `npm install husky`      |
 
 **The pitch:** you get Husky's ergonomics with none of its supply chain. Everything is plain shell you can read, audit and version in your repo.
 
@@ -113,7 +113,9 @@ sh scripts/install.sh --root ../my-repo  # install from anywhere
 | `pre-commit`  | Secret scan · blocked `.env`/keys · files >5MB · conflict markers · Prettier · ESLint            | **<5s**   |
 | `commit-msg`  | Conventional Commits (`feat(scope): …`), ≤72 chars — no `commitlint`                             | instant   |
 | `pre-push`    | full `tsc --noEmit` · `npm run build` · `npm test` · coverage · opt-in audit / API-break         | 30s–2min  |
+| `pre-rebase`  | refuses to rewrite protected branches (`main`/`master`/`develop`, configurable)                 | instant   |
 | `post-merge`  | warns when the lockfile changed after a pull → suggests `npm install`                            | instant   |
+| `post-checkout` | warns when the lockfile differs after switching branches                                      | instant   |
 
 **pre-commit** (staged files only): scans added lines for AWS keys, private-key
 blocks, Slack/OpenAI/GitHub/GitLab/Google tokens, JWTs and `password = "…"`

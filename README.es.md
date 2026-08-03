@@ -7,7 +7,7 @@
 </p>
 
 <p>
-  <a href="CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-2.0.0-38bdf8"></a>
+  <a href="CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-2.1.0-38bdf8"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-3fb950.svg"></a>
   <img alt="Shell: POSIX" src="https://img.shields.io/badge/shell-POSIX-4EAA25?logo=gnubash&logoColor=white">
   <img alt="dependencias npm: 0" src="https://img.shields.io/badge/dependencias_npm-0-38bdf8">
@@ -59,7 +59,7 @@ pero necesitás todo lo que Husky hace.
 | Gate de test coverage              | **incluido** (pre-push)     | necesita config propia         |
 | Auditoría de dependencias          | **incluida** (opt-in)       | no incluido                    |
 | Funciona en repos con deps bloqueadas | **sí**                   | no                             |
-| Huella de instalación              | **4 hooks + `git config`**  | `npm install husky`            |
+| Huella de instalación              | **6 hooks + `git config`**  | `npm install husky`            |
 
 **El pitch:** tenés la ergonomía de Husky sin su cadena de suministro. Todo es
 shell plano que podés leer, auditar y versionar en tu repo.
@@ -121,7 +121,9 @@ sh scripts/install.sh --root ../mi-repo  # instalar desde cualquier lado
 | `pre-commit`  | Escaneo de secretos · `.env`/llaves bloqueadas · archivos >5MB · marcadores de conflicto · Prettier · ESLint | **<5s** |
 | `commit-msg`  | Conventional Commits (`feat(scope): …`), ≤72 chars — sin `commitlint`                            | instantáneo |
 | `pre-push`    | `tsc --noEmit` completo · `npm run build` · `npm test` · coverage · audit/API-break opt-in       | 30s–2min    |
+| `pre-rebase`  | rechaza reescribir ramas protegidas (`main`/`master`/`develop`, configurable)                   | instantáneo |
 | `post-merge`  | avisa cuando el lockfile cambió tras un pull → sugiere `npm install`                             | instantáneo |
+| `post-checkout` | avisa cuando el lockfile difiere al cambiar de rama                                            | instantáneo |
 
 **pre-commit** (solo archivos staged): escanea líneas agregadas buscando llaves
 de AWS, bloques de private-key, tokens de Slack/OpenAI/GitHub/GitLab/Google, JWTs
