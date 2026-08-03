@@ -1,0 +1,93 @@
+#!/bin/sh
+# husky-skill · pre-commit
+# Fast quality gates on staged files. Target: <5s.
+# Bypass individual checks: SKIP_PRETTIER=1 / SKIP_ESLINT=1
+# Bypass everything (emergencies only): HUSKY=0 or git commit --no-verify
+# NOTE: the secret scan (check 1) has NO skip variable on purpose.
+
+[ "$HUSKY" = "0" ] && exit 0
+
+if [ -t 2 ]; then
+  RED=$(printf '\033[0;31m'); GREEN=$(printf '\033[0;32m')
+  YELLOW=$(printf '\033[0;33m'); NC=$(printf '\033[0m')
+else
+  RED=''; GREEN=''; YELLOW=''; NC=''
+fi
+
+fail() { printf '%s✖ %s%s\n' "$RED" "$1" "$NC" >&2; exit 1; }
+info() { printf '%s· %s%s\n' "$YELLOW" "$1" "$NC" >&2; }
+ok()   { printf '%s✔ %s%s\n' "$GREEN" "$1" "$NC" >&2; }
+
+STAGED=$(git -c core.quotepath=off diff --cached --name-only --diff-filter=ACMR)
+[ -z "$STAGED" ] && exit 0
+
+# ---------------------------------------------------------------
+# 1. Secret scan — added lines only. Not skippable.
+# ---------------------------------------------------------------
+SECRET_RE='AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY|xox[baprs]-[0-9A-Za-z-]{10,}|sk-[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{22,}|glpat-[A-Za-z0-9_-]{20,}|AIza[0-9A-Za-z_-]{35}|(aws_secret_access_key|api[_-]?key|secret[_-]?key|auth[_-]?token|password)['"'"'"]?[[:space:]]*[:=][[:space:]]*['"'"'"][A-Za-z0-9+/=_-]{16,}'
+
+HITS=$(git diff --cached -U0 | grep -E '^\+' | grep -vE '^\+\+\+' | grep -inE "$SECRET_RE" || true)
+if [ -n "$HITS" ]; then
+  printf '%s✖ Posible credencial detectada en líneas agregadas:%s\n' "$RED" "$NC" >&2
+  printf '%s\n' "$HITS" | head -10 >&2
+  printf '\n%sSi es un falso positivo (fixture/test), commiteá con:%s\n' "$YELLOW" "$NC" >&2
+  printf '  git commit --no-verify   %s(y avisá al equipo)%s\n' "$YELLOW" "$NC" >&2
+  exit 1
+fi
+
+# ---------------------------------------------------------------
+# 2. Archivos sospechosos por nombre — .env, llaves, keystores
+# ---------------------------------------------------------------
+BAD_NAMES=$(printf '%s\n' "$STAGED" | grep -E '(^|/)\.env(\..+)?$|\.(pem|key|p12|pfx|jks|keystore)$' | grep -vE '\.env\.(example|sample|template)$' || true)
+[ -n "$BAD_NAMES" ] && {
+  printf '%s✖ Archivos que casi nunca deben ir a Git:%s\n%s\n' "$RED" "$NC" "$BAD_NAMES" >&2
+  fail "Agregalos a .gitignore o usá --no-verify si es intencional."
+}
+
+# ---------------------------------------------------------------
+# 3. Archivos grandes (>5MB)
+# ---------------------------------------------------------------
+printf '%s\n' "$STAGED" | while IFS= read -r f; do
+  [ -f "$f" ] || continue
+  SIZE=$(wc -c < "$f")
+  if [ "$SIZE" -gt 5242880 ]; then
+    printf '%s✖ %s pesa %s bytes (>5MB). ¿Seguro que va a Git? (Git LFS / .gitignore)%s\n' "$RED" "$f" "$SIZE" "$NC" >&2
+    exit 1
+  fi
+done || exit 1
+
+# ---------------------------------------------------------------
+# 4. Marcadores de conflicto sin resolver
+# ---------------------------------------------------------------
+CONFLICTS=$(printf '%s\n' "$STAGED" | while IFS= read -r f; do
+  [ -f "$f" ] || continue
+  grep -lE '^(<{7}( |$)|={7}$|>{7}( |$))' "$f" 2>/dev/null || true
+done)
+[ -n "$CONFLICTS" ] && fail "Marcadores de conflicto sin resolver en: $CONFLICTS"
+
+# ---------------------------------------------------------------
+# 5 + 6. Prettier / ESLint — solo archivos JS/TS staged
+#    Sin --fix a propósito: el hook nunca modifica tus archivos.
+#    Sin npx a propósito: cero egress de red desde un hook.
+# ---------------------------------------------------------------
+JS=$(printf '%s\n' "$STAGED" | grep -E '\.(ts|tsx|js|jsx|mjs|cjs)$' || true)
+if [ -n "$JS" ]; then
+  if [ "$SKIP_PRETTIER" != "1" ] && [ -x node_modules/.bin/prettier ]; then
+    # shellcheck disable=SC2086
+    printf '%s\n' "$JS" | tr '\n' '\0' | xargs -0 node_modules/.bin/prettier --check --log-level warn \
+      || fail "Formato incorrecto. Corré: npm run format (o prettier --write)"
+  elif [ "$SKIP_PRETTIER" = "1" ]; then
+    info "Prettier saltado (SKIP_PRETTIER=1)"
+  fi
+
+  if [ "$SKIP_ESLINT" != "1" ] && [ -x node_modules/.bin/eslint ]; then
+    # shellcheck disable=SC2086
+    printf '%s\n' "$JS" | tr '\n' '\0' | xargs -0 node_modules/.bin/eslint --max-warnings=0 \
+      || fail "ESLint falló. Corré: npm run lint:fix (o eslint --fix) y revisá los cambios."
+  elif [ "$SKIP_ESLINT" = "1" ]; then
+    info "ESLint saltado (SKIP_ESLINT=1)"
+  fi
+fi
+
+ok "pre-commit OK"
+exit 0

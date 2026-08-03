@@ -1,0 +1,57 @@
+#!/bin/sh
+# husky-skill · commit-msg
+# Valida Conventional Commits sin dependencias (no commitlint, no Node).
+# Formato:  type(scope)!: subject
+#   - type obligatorio, de la lista de abajo
+#   - (scope) opcional, minúsculas/números/guiones
+#   - ! opcional (breaking change)
+#   - subject obligatorio, 1-72 chars en la primera línea
+# Se saltan automáticamente: merges, reverts generados, fixup!/squash!.
+
+[ "$HUSKY" = "0" ] && exit 0
+
+MSG_FILE="$1"
+[ -f "$MSG_FILE" ] || exit 0
+
+if [ -t 2 ]; then
+  RED=$(printf '\033[0;31m'); GREEN=$(printf '\033[0;32m'); NC=$(printf '\033[0m')
+else
+  RED=''; GREEN=''; NC=''
+fi
+
+# Primera línea sin comentarios
+FIRST=$(grep -v '^#' "$MSG_FILE" | head -1)
+
+# Vacío → dejá que git lo maneje (aborta solo)
+[ -z "$FIRST" ] && exit 0
+
+# Casos generados por git que no deben validarse
+case "$FIRST" in
+  Merge\ *|Revert\ \"*|fixup!\ *|squash!\ *) exit 0 ;;
+esac
+
+TYPES='feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert'
+
+if ! printf '%s' "$FIRST" | grep -qE "^($TYPES)(\([a-z0-9-]+\))?!?: .+" ; then
+  printf '%s✖ Mensaje de commit inválido:%s\n' "$RED" "$NC" >&2
+  printf '  "%s"\n\n' "$FIRST" >&2
+  printf 'Formato requerido (Conventional Commits):\n' >&2
+  printf '  type(scope): subject\n\n' >&2
+  printf 'Types válidos: feat fix docs style refactor perf test build ci chore revert\n\n' >&2
+  printf 'Ejemplos:\n' >&2
+  printf '  feat(auth): agregar login con OAuth2\n' >&2
+  printf '  fix(api): corregir null pointer en /users\n' >&2
+  printf '  chore: actualizar dependencias\n' >&2
+  printf '  feat(payments)!: cambiar moneda base a USD  (breaking)\n' >&2
+  exit 1
+fi
+
+LEN=${#FIRST}
+if [ "$LEN" -gt 72 ]; then
+  printf '%s✖ Primera línea muy larga: %s chars (máx 72).%s\n' "$RED" "$LEN" "$NC" >&2
+  printf '  Mové el detalle al cuerpo del commit (línea en blanco + descripción).\n' >&2
+  exit 1
+fi
+
+printf '%s✔ commit-msg OK%s\n' "$GREEN" "$NC" >&2
+exit 0
