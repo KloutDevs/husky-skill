@@ -1,0 +1,25 @@
+#!/bin/sh
+# husky-skill · post-merge
+# Runs after `git merge` / `git pull`. Warns when the dependency lockfile changed
+# so you don't keep running stale dependencies. It NEVER installs automatically —
+# a hook must not mutate your environment behind your back.
+# Skip: HUSKY=0
+
+[ "$HUSKY" = "0" ] && exit 0
+
+if [ -t 2 ]; then
+  YELLOW=$(printf '\033[0;33m'); NC=$(printf '\033[0m')
+else
+  YELLOW=''; NC=''
+fi
+
+# $1 = 1 when the merge was a squash merge; otherwise diff HEAD against ORIG_HEAD
+CHANGED=$(git diff-tree -r --name-only --no-commit-id ORIG_HEAD HEAD 2>/dev/null || true)
+
+echo "$CHANGED" | grep -qE '(^|/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml)$' && {
+  printf '%s· Dependency lockfile changed in this merge.%s\n' "$YELLOW" "$NC" >&2
+  printf '  Run your installer to avoid running stale dependencies:\n' >&2
+  printf '    npm install   (or yarn / pnpm install)\n' >&2
+}
+
+exit 0

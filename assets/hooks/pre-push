@@ -1,8 +1,9 @@
 #!/bin/sh
 # husky-skill · pre-push
 # Last gate before code leaves your machine.
-# The heavy lifting lives here: full type-check, build, tests.
-# Skip individual checks: SKIP_TYPESCRIPT=1 / SKIP_BUILD=1 / SKIP_TESTS=1
+# The heavy lifting lives here: full type-check, build, tests, coverage.
+# Skip individual checks: SKIP_TYPESCRIPT=1 / SKIP_BUILD=1 / SKIP_TESTS=1 / SKIP_COVERAGE=1
+# Opt-in checks (off by default): ENABLE_AUDIT=1 (network) / ENABLE_API_CHECK=1
 # Skip everything (emergencies): HUSKY=0 git push  /  git push --no-verify
 #
 # Design note: this does NOT replace CI. Anyone can push with --no-verify;
@@ -20,15 +21,21 @@ fi
 fail() { printf '%s✖ %s%s\n' "$RED" "$1" "$NC" >&2; exit 1; }
 info() { printf '%s· %s%s\n' "$YELLOW" "$1" "$NC" >&2; }
 ok()   { printf '%s✔ %s%s\n' "$GREEN" "$1" "$NC" >&2; }
+warn() { printf '%s⚠ %s%s\n' "$YELLOW" "$1" "$NC" >&2; }
 
-# Detect whether there is anything to push (stdin: <local ref> <sha> <remote ref> <sha>)
+# Detect whether there is anything to push and capture the diff range for the
+# optional API-break heuristic (stdin: <local ref> <sha> <remote ref> <sha>)
 PUSHING=0
-while read -r _local_ref local_sha _remote_ref _remote_sha; do
+RANGE=''
+ZERO=0000000000000000000000000000000000000000
+while read -r _local_ref local_sha _remote_ref remote_sha; do
   # Remote branch deletion: local_sha = 40 zeros → nothing to validate
-  case "$local_sha" in
-    0000000000000000000000000000000000000000) continue ;;
-  esac
+  [ "$local_sha" = "$ZERO" ] && continue
   PUSHING=1
+  # First real range wins; new branch (remote all-zeros) has no base to diff
+  if [ -z "$RANGE" ] && [ "$remote_sha" != "$ZERO" ]; then
+    RANGE="$remote_sha..$local_sha"
+  fi
 done
 [ "$PUSHING" -eq 0 ] && exit 0
 
@@ -68,6 +75,50 @@ if [ "$SKIP_TESTS" != "1" ] && has_script test; then
   fi
 elif [ "$SKIP_TESTS" = "1" ]; then
   info "Tests skipped (SKIP_TESTS=1)"
+fi
+
+# ---------------------------------------------------------------
+# 4. Coverage gate — runs the project's coverage script if it exists.
+#    The THRESHOLD is configured where it belongs: jest/vitest/nyc config
+#    (coverageThreshold / coverage.thresholds). The runner enforces it and
+#    exits non-zero; we just make sure it runs before a push.
+# ---------------------------------------------------------------
+if [ "$SKIP_COVERAGE" != "1" ]; then
+  if has_script test:coverage; then
+    info "npm run test:coverage…"
+    npm run test:coverage --silent || fail "Coverage below threshold. Raise coverage or adjust the threshold in your test config."
+  elif has_script coverage; then
+    info "npm run coverage…"
+    npm run coverage --silent || fail "Coverage below threshold. Raise coverage or adjust the threshold in your test config."
+  fi
+elif [ "$SKIP_COVERAGE" = "1" ]; then
+  info "Coverage skipped (SKIP_COVERAGE=1)"
+fi
+
+# ---------------------------------------------------------------
+# 5. Dependency audit — OPT-IN. This is the ONLY check that touches the
+#    network, so it is off by default to preserve zero-egress. Enable per push:
+#    ENABLE_AUDIT=1 git push
+# ---------------------------------------------------------------
+if [ "$ENABLE_AUDIT" = "1" ] && [ -f package-lock.json ]; then
+  info "npm audit --audit-level=high (network)…"
+  npm audit --audit-level=high || fail "High/critical vulnerabilities found. Run 'npm audit fix' or triage before pushing."
+fi
+
+# ---------------------------------------------------------------
+# 6. API-break heuristic — OPT-IN, WARN ONLY (never blocks).
+#    Flags removed public exports in TypeScript declaration files across the
+#    push range. It is a heuristic, not a semver tool — treat it as a nudge to
+#    double-check, not a guarantee. Enable: ENABLE_API_CHECK=1 git push
+# ---------------------------------------------------------------
+if [ "$ENABLE_API_CHECK" = "1" ] && [ -n "$RANGE" ]; then
+  REMOVED=$(git diff "$RANGE" -- '*.d.ts' 2>/dev/null \
+    | grep -E '^-.*\bexport\b' | grep -vE '^---' | head -10 || true)
+  if [ -n "$REMOVED" ]; then
+    warn "Possible breaking API change — public exports removed in .d.ts:"
+    printf '%s\n' "$REMOVED" >&2
+    printf '  %sHeuristic only. If intentional, bump a major version.%s\n' "$YELLOW" "$NC" >&2
+  fi
 fi
 
 ok "pre-push OK — code validated before leaving your machine"
