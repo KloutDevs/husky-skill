@@ -1,12 +1,12 @@
 #!/bin/sh
 # husky-skill · commit-msg
-# Valida Conventional Commits sin dependencias (no commitlint, no Node).
-# Formato:  type(scope)!: subject
-#   - type obligatorio, de la lista de abajo
-#   - (scope) opcional, minúsculas/números/guiones
-#   - ! opcional (breaking change)
-#   - subject obligatorio, 1-72 chars en la primera línea
-# Se saltan automáticamente: merges, reverts generados, fixup!/squash!.
+# Validates Conventional Commits with zero dependencies (no commitlint, no Node).
+# Format:  type(scope)!: subject
+#   - type required, from the list below
+#   - (scope) optional, lowercase/digits/dashes
+#   - ! optional (breaking change)
+#   - subject required, 1-72 chars on the first line
+# Auto-skipped: merges, generated reverts, fixup!/squash!.
 
 [ "$HUSKY" = "0" ] && exit 0
 
@@ -19,13 +19,13 @@ else
   RED=''; GREEN=''; NC=''
 fi
 
-# Primera línea sin comentarios
+# First line, comments stripped
 FIRST=$(grep -v '^#' "$MSG_FILE" | head -1)
 
-# Vacío → dejá que git lo maneje (aborta solo)
+# Empty → let git handle it (it aborts on its own)
 [ -z "$FIRST" ] && exit 0
 
-# Casos generados por git que no deben validarse
+# Git-generated cases that must not be validated
 case "$FIRST" in
   Merge\ *|Revert\ \"*|fixup!\ *|squash!\ *) exit 0 ;;
 esac
@@ -33,23 +33,23 @@ esac
 TYPES='feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert'
 
 if ! printf '%s' "$FIRST" | grep -qE "^($TYPES)(\([a-z0-9-]+\))?!?: .+" ; then
-  printf '%s✖ Mensaje de commit inválido:%s\n' "$RED" "$NC" >&2
+  printf '%s✖ Invalid commit message:%s\n' "$RED" "$NC" >&2
   printf '  "%s"\n\n' "$FIRST" >&2
-  printf 'Formato requerido (Conventional Commits):\n' >&2
+  printf 'Required format (Conventional Commits):\n' >&2
   printf '  type(scope): subject\n\n' >&2
-  printf 'Types válidos: feat fix docs style refactor perf test build ci chore revert\n\n' >&2
-  printf 'Ejemplos:\n' >&2
-  printf '  feat(auth): agregar login con OAuth2\n' >&2
-  printf '  fix(api): corregir null pointer en /users\n' >&2
-  printf '  chore: actualizar dependencias\n' >&2
-  printf '  feat(payments)!: cambiar moneda base a USD  (breaking)\n' >&2
+  printf 'Valid types: feat fix docs style refactor perf test build ci chore revert\n\n' >&2
+  printf 'Examples:\n' >&2
+  printf '  feat(auth): add OAuth2 login\n' >&2
+  printf '  fix(api): fix null pointer in /users\n' >&2
+  printf '  chore: update dependencies\n' >&2
+  printf '  feat(payments)!: switch base currency to USD  (breaking)\n' >&2
   exit 1
 fi
 
 LEN=${#FIRST}
 if [ "$LEN" -gt 72 ]; then
-  printf '%s✖ Primera línea muy larga: %s chars (máx 72).%s\n' "$RED" "$LEN" "$NC" >&2
-  printf '  Mové el detalle al cuerpo del commit (línea en blanco + descripción).\n' >&2
+  printf '%s✖ First line too long: %s chars (max 72).%s\n' "$RED" "$LEN" "$NC" >&2
+  printf '  Move the detail to the commit body (blank line + description).\n' >&2
   exit 1
 fi
 
