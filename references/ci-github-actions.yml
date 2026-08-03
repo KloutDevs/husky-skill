@@ -1,0 +1,58 @@
+# husky-skill · EXAMPLE GitHub Actions workflow
+# -----------------------------------------------------------------------------
+# Hooks are a filter; CI is the gate. Run the SAME checks here, where they cannot
+# be skipped with --no-verify. Copy this to .github/workflows/ci.yml in your repo
+# and adapt as needed.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history so the secret scan sees the real diff
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # Same gates the hooks run locally — but mandatory here.
+      - name: Secret scan (pre-commit parity)
+        # Pass the ref through env — never interpolate ${{ }} straight into run:
+        env:
+          BASE_REF: ${{ github.base_ref || 'main' }}
+        run: |
+          # Re-run the staged secret scan against the PR range:
+          git diff "origin/${BASE_REF}...HEAD" -U0 \
+            | grep -E '^\+' | grep -vE '^\+\+\+' \
+            | grep -inE 'AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY|ghp_[A-Za-z0-9]{36}|sk-[A-Za-z0-9_-]{20,}' \
+            && { echo "::error::Possible credential in diff"; exit 1; } || echo "No secrets found"
+
+      - name: Lint
+        run: npx eslint . --max-warnings=0
+
+      - name: Format check
+        run: npx prettier --check .
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build --if-present
+
+      - name: Test
+        run: npm test --if-present
+
+      # Optional: enforce coverage (threshold configured in jest/vitest config)
+      - name: Coverage
+        run: npm run test:coverage --if-present

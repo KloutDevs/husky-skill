@@ -51,12 +51,14 @@ pero necesitás todo lo que Husky hace.
 |                                    | **husky-skill**             | Husky                          |
 | ---------------------------------- | --------------------------- | ------------------------------ |
 | Dependencias npm                   | **0**                       | 1 + peers (lint-staged, …)     |
-| Egress de red al correr el hook    | **ninguno**                 | posible (`npx` puede descargar) |
+| Egress de red al correr el hook    | **ninguno** (audit es opt-in) | posible (`npx` puede descargar) |
 | Implementado en                    | **POSIX `sh`**              | Node + shell                   |
 | Validación de mensaje de commit    | **incluida**                | necesita `commitlint`          |
 | Escaneo de secretos                | **incluido, sin skip**      | no incluido                    |
+| Gate de test coverage              | **incluido** (pre-push)     | necesita config propia         |
+| Auditoría de dependencias          | **incluida** (opt-in)       | no incluido                    |
 | Funciona en repos con deps bloqueadas | **sí**                   | no                             |
-| Huella de instalación              | **3 archivos + `git config`** | `npm install husky`          |
+| Huella de instalación              | **4 hooks + `git config`**  | `npm install husky`            |
 
 **El pitch:** tenés la ergonomía de Husky sin su cadena de suministro. Todo es
 shell plano que podés leer, auditar y versionar en tu repo.
@@ -91,7 +93,13 @@ sh ../husky-skill/scripts/install.sh
 
 Eso copia los hooks a `.githooks/`, configura `core.hooksPath` y agrega un
 script `prepare` a tu `package.json` para que todo el equipo herede los hooks
-con `npm install`.
+con `npm install`. Previsualizá con `--dry-run` (no escribe nada) o apuntá a otro
+repo con `--root PATH`:
+
+```sh
+sh scripts/install.sh --dry-run          # muestra exactamente qué cambiaría
+sh scripts/install.sh --root ../mi-repo  # instalar desde cualquier lado
+```
 
 > [!IMPORTANT]
 > Los hooks son un **filtro, no una seguridad**. `--no-verify` existe. CI es el
@@ -104,7 +112,8 @@ con `npm install`.
 | ------------- | ----------------------------------------------------------------------------------------------- | ----------- |
 | `pre-commit`  | Escaneo de secretos · `.env`/llaves bloqueadas · archivos >5MB · marcadores de conflicto · Prettier · ESLint | **<5s** |
 | `commit-msg`  | Conventional Commits (`feat(scope): …`), ≤72 chars — sin `commitlint`                            | instantáneo |
-| `pre-push`    | `tsc --noEmit` completo · `npm run build` · `npm test`                                           | 30s–2min    |
+| `pre-push`    | `tsc --noEmit` completo · `npm run build` · `npm test` · coverage · audit/API-break opt-in       | 30s–2min    |
+| `post-merge`  | avisa cuando el lockfile cambió tras un pull → sugiere `npm install`                             | instantáneo |
 
 **pre-commit** (solo archivos staged): escanea líneas agregadas buscando llaves
 de AWS, bloques de private-key, tokens de Slack/OpenAI/GitHub/GitLab/Google, JWTs
@@ -114,7 +123,14 @@ resolver; corre Prettier `--check` y ESLint `--max-warnings=0`.
 
 **pre-push** (la puerta pesada): `tsc --noEmit` del proyecto completo atrapa
 errores de tipos cross-file que los checks staged-only no ven, después
-`npm run build` y `npm test` si esos scripts existen.
+`npm run build`, `npm test` y tu script de **coverage** si existen. Dos extras
+opt-in: **auditoría de dependencias** por red (`ENABLE_AUDIT=1`) y una
+**heurística de breaking-change** que solo avisa (`ENABLE_API_CHECK=1`).
+
+> [!TIP]
+> Referencia completa — todos los tipos de hook, notas por stack, monorepos,
+> migración desde Husky, los checks opcionales y la paridad con CI — en
+> [`references/full-guide.md`](references/full-guide.md).
 
 ## Principios de diseño
 
@@ -132,10 +148,12 @@ errores de tipos cross-file que los checks staged-only no ven, después
 ## Escape hatches
 
 ```sh
-SKIP_ESLINT=1 / SKIP_PRETTIER=1                 # en commit
-SKIP_TYPESCRIPT=1 / SKIP_BUILD=1 / SKIP_TESTS=1 # en push
-HUSKY=0 git commit                              # apagar todo (CI/emergencias)
-git commit --no-verify                          # bypass nativo de git
+SKIP_ESLINT=1 / SKIP_PRETTIER=1                             # en commit
+SKIP_TYPESCRIPT=1 / SKIP_BUILD=1 / SKIP_TESTS=1 / SKIP_COVERAGE=1   # en push
+ENABLE_AUDIT=1 git push          # auditoría de deps opt-in (el único check con red)
+ENABLE_API_CHECK=1 git push      # aviso de export removido (nunca bloquea)
+HUSKY=0 git commit                                          # apagar todo
+git commit --no-verify                                      # bypass nativo de git
 ```
 
 > [!WARNING]

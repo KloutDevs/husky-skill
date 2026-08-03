@@ -44,15 +44,17 @@ Built for environments where the dependency tree is policy — **fintech, health
 
 ## Why husky-skill
 
-|                                   | **husky-skill**            | Husky                          |
-| --------------------------------- | -------------------------- | ------------------------------ |
-| npm dependencies                  | **0**                      | 1 + peers (lint-staged, …)     |
-| Network egress at hook runtime    | **none**                   | possible (`npx` may fetch)     |
-| Implemented in                    | **POSIX `sh`**             | Node + shell                   |
-| Commit-message validation         | **built-in**               | needs `commitlint`             |
-| Secret scanning                   | **built-in, not skippable** | not included                  |
-| Works in dependency-locked repos  | **yes**                    | no                             |
-| Install footprint                 | **3 files + `git config`** | `npm install husky`            |
+|                                   | **husky-skill**             | Husky                        |
+| --------------------------------- | --------------------------- | ---------------------------- |
+| npm dependencies                  | **0**                       | 1 + peers (lint-staged, …)   |
+| Network egress at hook runtime    | **none** (audit is opt-in)  | possible (`npx` may fetch)   |
+| Implemented in                    | **POSIX `sh`**              | Node + shell                 |
+| Commit-message validation         | **built-in**                | needs `commitlint`           |
+| Secret scanning                   | **built-in, not skippable** | not included                 |
+| Test-coverage gate                | **built-in** (pre-push)     | needs custom config          |
+| Dependency audit                  | **built-in** (opt-in)       | not included                 |
+| Works in dependency-locked repos  | **yes**                     | no                           |
+| Install footprint                 | **4 hook files + `git config`** | `npm install husky`      |
 
 **The pitch:** you get Husky's ergonomics with none of its supply chain. Everything is plain shell you can read, audit and version in your repo.
 
@@ -84,7 +86,13 @@ sh ../husky-skill/scripts/install.sh
 
 That copies the hooks to `.githooks/`, sets `core.hooksPath`, and adds a
 `prepare` script to your `package.json` so the whole team inherits the hooks on
-`npm install`.
+`npm install`. Preview first with `--dry-run` (writes nothing), or target another
+repo with `--root PATH`:
+
+```sh
+sh scripts/install.sh --dry-run          # show exactly what would change
+sh scripts/install.sh --root ../my-repo  # install from anywhere
+```
 
 > [!IMPORTANT]
 > Hooks are a **filter, not a gate**. `--no-verify` exists. CI is the mandatory
@@ -97,7 +105,8 @@ That copies the hooks to `.githooks/`, sets `core.hooksPath`, and adds a
 | ------------- | ----------------------------------------------------------------------------------------------- | --------- |
 | `pre-commit`  | Secret scan · blocked `.env`/keys · files >5MB · conflict markers · Prettier · ESLint            | **<5s**   |
 | `commit-msg`  | Conventional Commits (`feat(scope): …`), ≤72 chars — no `commitlint`                             | instant   |
-| `pre-push`    | full `tsc --noEmit` · `npm run build` · `npm test`                                               | 30s–2min  |
+| `pre-push`    | full `tsc --noEmit` · `npm run build` · `npm test` · coverage · opt-in audit / API-break         | 30s–2min  |
+| `post-merge`  | warns when the lockfile changed after a pull → suggests `npm install`                            | instant   |
 
 **pre-commit** (staged files only): scans added lines for AWS keys, private-key
 blocks, Slack/OpenAI/GitHub/GitLab/Google tokens, JWTs and `password = "…"`
@@ -106,8 +115,15 @@ rejects files >5MB and unresolved conflict markers; runs Prettier `--check` and
 ESLint `--max-warnings=0`.
 
 **pre-push** (the heavy gate): full-project `tsc --noEmit` catches cross-file
-type errors that staged-only checks miss, then `npm run build` and `npm test`
-if those scripts exist.
+type errors that staged-only checks miss, then `npm run build`, `npm test` and
+your **coverage** script if they exist. Two opt-in extras: a network
+**dependency audit** (`ENABLE_AUDIT=1`) and a warn-only **API-break heuristic**
+(`ENABLE_API_CHECK=1`).
+
+> [!TIP]
+> Full reference — every hook type, per-stack notes, monorepos, Husky migration,
+> the optional checks and CI parity — lives in
+> [`references/full-guide.md`](references/full-guide.md).
 
 ## Design principles
 
@@ -124,10 +140,12 @@ if those scripts exist.
 ## Escape hatches
 
 ```sh
-SKIP_ESLINT=1 / SKIP_PRETTIER=1                 # on commit
-SKIP_TYPESCRIPT=1 / SKIP_BUILD=1 / SKIP_TESTS=1 # on push
-HUSKY=0 git commit                              # skip everything (CI/emergencies)
-git commit --no-verify                          # git-native full bypass
+SKIP_ESLINT=1 / SKIP_PRETTIER=1                             # on commit
+SKIP_TYPESCRIPT=1 / SKIP_BUILD=1 / SKIP_TESTS=1 / SKIP_COVERAGE=1   # on push
+ENABLE_AUDIT=1 git push          # opt-in dependency audit (the only network check)
+ENABLE_API_CHECK=1 git push      # opt-in removed-export warning (never blocks)
+HUSKY=0 git commit                                          # skip everything
+git commit --no-verify                                      # git-native full bypass
 ```
 
 > [!WARNING]
