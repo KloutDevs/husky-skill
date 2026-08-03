@@ -7,6 +7,7 @@
 </p>
 
 <p>
+  <a href="CHANGELOG.md"><img alt="Version" src="https://img.shields.io/badge/version-2.0.0-38bdf8"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-3fb950.svg"></a>
   <img alt="Shell: POSIX" src="https://img.shields.io/badge/shell-POSIX-4EAA25?logo=gnubash&logoColor=white">
   <img alt="dependencias npm: 0" src="https://img.shields.io/badge/dependencias_npm-0-38bdf8">
