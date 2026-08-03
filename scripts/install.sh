@@ -87,23 +87,25 @@ else
   printf '%s· core.hooksPath was already configured%s\n' "$YELLOW" "$NC"
 fi
 
-# 4. Suggest/add a prepare script so the team inherits the hooks
+# 4. Suggest/add a prepare script so the team inherits the hooks.
+#    The `git rev-parse --git-dir` guard makes it a no-op (exit 0) when there is
+#    no .git — otherwise `npm install` fails with code 128 in CI/Docker builds.
 if [ -f "$GIT_ROOT/package.json" ]; then
   if node -e "process.exit(((require('$GIT_ROOT/package.json').scripts||{}).prepare)?0:1)" 2>/dev/null; then
     printf '%s· package.json already has a "prepare" script — make sure it includes:%s\n' "$YELLOW" "$NC"
-    printf '    git config core.hooksPath .githooks\n'
+    printf '    git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true\n'
   else
-    say 'add "prepare": "git config core.hooksPath .githooks" to package.json'
+    say 'add a git-dir-guarded "prepare" script to package.json (CI/Docker-safe)'
     if [ "$DRY_RUN" != "1" ]; then
       node -e "
         const fs=require('fs'),p='$GIT_ROOT/package.json';
         const j=JSON.parse(fs.readFileSync(p,'utf8'));
         j.scripts=j.scripts||{};
-        j.scripts.prepare='git config core.hooksPath .githooks';
+        j.scripts.prepare='git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true';
         fs.writeFileSync(p,JSON.stringify(j,null,2)+'\n');
       " 2>/dev/null && \
         printf '%s✔ "prepare" script added to package.json (team inherits hooks on npm install)%s\n' "$GREEN" "$NC" || \
-        printf '%s· Could not edit package.json — add manually: "prepare": "git config core.hooksPath .githooks"%s\n' "$YELLOW" "$NC"
+        printf '%s· Could not edit package.json — add manually: "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true"%s\n' "$YELLOW" "$NC"
     fi
   fi
 fi

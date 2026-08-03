@@ -5,6 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.1] - 2026-08-03
+
+### Fixed
+
+- **`prepare` script broke CI/Docker builds.** The installer wired
+  `"prepare": "git config core.hooksPath .githooks"`, which runs on every
+  `npm install` — including image/CI builds where there is no `.git` directory,
+  failing with `fatal: not in a git directory` (exit 128) and aborting the
+  build. The installer now writes a git-dir-guarded prepare
+  (`git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true`) —
+  a no-op that exits 0 wherever git is absent. Existing installs: update the
+  `prepare` line in your `package.json` to that form.
+
 ## [2.1.0] - 2026-08-03
 
 ### Added
@@ -66,6 +79,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `scripts/install.sh` with idempotent install + `prepare` wiring.
 - MIT license.
 
+[2.1.1]: https://github.com/KloutDevs/husky-skill/releases/tag/v2.1.1
 [2.1.0]: https://github.com/KloutDevs/husky-skill/releases/tag/v2.1.0
 [2.0.0]: https://github.com/KloutDevs/husky-skill/releases/tag/v2.0.0
 [1.0.0]: https://github.com/KloutDevs/husky-skill/releases/tag/v1.0.0

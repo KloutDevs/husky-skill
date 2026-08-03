@@ -11,7 +11,7 @@ description: >-
   mentions Husky, lint-staged, commitlint, pre-commit, githooks — even
   implicitly ("fail commits if ESLint fails", "block secrets before push").
 metadata:
-  version: "2.1.0"
+  version: "2.1.1"
   tags: "git-hooks, husky, lint-staged, commitlint, pre-commit, commit-msg, pre-push, post-merge, pre-rebase, post-checkout, secret-scanning, conventional-commits, eslint, prettier, typescript, monorepo, test-coverage, dependency-audit, posix-shell, zero-dependencies"
 ---
 

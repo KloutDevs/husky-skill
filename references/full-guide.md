@@ -184,7 +184,7 @@ migrating from Husky. The **secret scan has no skip variable** by design.
 
 1. `npm uninstall husky` and delete the `.husky/` directory.
 2. Remove any `"prepare": "husky install"` from `package.json` (the installer
-   adds `"prepare": "git config core.hooksPath .githooks"`).
+   adds a git-dir-guarded `"prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true"`).
 3. Run `sh scripts/install.sh` (or `--root PATH`). Your old logic, if any, was
    in `.husky/pre-commit` etc. — port anything custom into `.githooks/`.
 4. Husky v4 used `package.json` `"husky"` config; v9 uses files. husky-skill
@@ -207,6 +207,11 @@ cannot be skipped. Copy [`ci-github-actions.yml`](ci-github-actions.yml) to
   Run `npm install`; hooks only use local binaries by design.
 - **Hooks don't run after clone** → run `npm install` (fires `prepare`), or
   `git config core.hooksPath .githooks` manually.
+- **`npm install` fails with `fatal: not in a git directory` / exit 128 in a
+  Docker or CI build** → the `prepare` script ran where there is no `.git`. The
+  installer now writes a git-dir-guarded prepare
+  (`git rev-parse --git-dir >/dev/null 2>&1 && … || true`); if you installed an
+  older version, update the `prepare` line in `package.json` to that form.
 - **Hook is slow** → pre-commit should stay <5s; if not, something heavy leaked
   in. Move it to pre-push. Never "fix" slowness by teaching people `--no-verify`.
 - **Coverage step never runs** → you need a `test:coverage` (or `coverage`) npm
