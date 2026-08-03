@@ -28,7 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ShellCheck + a secret-scan smoke test.
 - Frontmatter `metadata` (version + keyword-dense tags) for discoverability.
 - Bilingual documentation: `README.md` (English, primary) + `README.es.md`.
-- Branded SVG assets: `assets/banner.svg` and `assets/demo.svg`.
+- Branded SVG assets: `assets/banner.svg` (with a `coverage gate` pill),
+  `assets/demo.svg`, and `assets/demo-coverage.svg` (the `pre-push` gate).
 - `CONTRIBUTING.md` and `SECURITY.md`.
 
 ### Changed

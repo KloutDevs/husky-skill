@@ -1,0 +1,31 @@
+<svg width="820" height="330" viewBox="0 0 820 330" fill="none" xmlns="http://www.w3.org/2000/svg" font-family="ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace">
+  <defs>
+    <linearGradient id="glow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0d1117"/>
+      <stop offset="1" stop-color="#010409"/>
+    </linearGradient>
+  </defs>
+
+  <!-- window -->
+  <rect x="8" y="8" width="804" height="314" rx="12" fill="url(#glow)" stroke="#30363d" stroke-width="1.5"/>
+
+  <!-- title bar -->
+  <rect x="8" y="8" width="804" height="44" rx="12" fill="#161b22"/>
+  <rect x="8" y="40" width="804" height="12" fill="#161b22"/>
+  <circle cx="34" cy="30" r="6" fill="#ff5f56"/>
+  <circle cx="56" cy="30" r="6" fill="#ffbd2e"/>
+  <circle cx="78" cy="30" r="6" fill="#27c93f"/>
+  <text x="410" y="35" text-anchor="middle" font-size="13" fill="#8b949e">husky-skill · pre-push</text>
+
+  <!-- body -->
+  <g font-size="15.5">
+    <text x="30" y="90"><tspan fill="#3fb950">$</tspan><tspan fill="#c9d1d9"> git push </tspan><tspan fill="#a5d6ff">origin main</tspan></text>
+
+    <text x="30" y="138" fill="#d29922">· tsc --noEmit (whole project)…</text>
+    <text x="30" y="166" fill="#d29922">· npm run build…</text>
+    <text x="30" y="194" fill="#d29922">· npm test…</text>
+    <text x="30" y="222"><tspan fill="#d29922">· npm run test:coverage…   </tspan><tspan fill="#3fb950">→  94% ✓</tspan><tspan fill="#6e7681">   (threshold 80%)</tspan></text>
+
+    <text x="30" y="278"><tspan fill="#3fb950" font-weight="bold">✔</tspan><tspan fill="#3fb950"> pre-push OK — code validated before leaving your machine</tspan></text>
+  </g>
+</svg>

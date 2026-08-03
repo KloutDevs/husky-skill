@@ -74,6 +74,13 @@ estilo:
   <img src="assets/demo.svg" alt="pre-commit bloqueando un commit que contiene un secreto de AWS" width="90%">
 </div>
 
+Y antes de que algo salga de tu máquina, `pre-push` corre la puerta pesada —
+tipos, build, tests y tu umbral de coverage:
+
+<div align="center">
+  <img src="assets/demo-coverage.svg" alt="pre-push pasando type-check, build, tests y el gate de coverage" width="90%">
+</div>
+
 ## Instalación
 
 ### Como agent skill ([skills.sh](https://skills.sh))

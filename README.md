@@ -67,6 +67,12 @@ The secret scan runs on **added lines only** and has **no skip flag** — a leak
   <img src="assets/demo.svg" alt="pre-commit blocking a commit that contains an AWS secret" width="90%">
 </div>
 
+And before anything leaves your machine, `pre-push` runs the heavy gate — types, build, tests and your coverage threshold:
+
+<div align="center">
+  <img src="assets/demo-coverage.svg" alt="pre-push passing type-check, build, tests and the coverage gate" width="90%">
+</div>
+
 ## Install
 
 ### As an agent skill ([skills.sh](https://skills.sh))
